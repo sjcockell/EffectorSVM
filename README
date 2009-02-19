@@ -1,0 +1,8 @@
+EffectorSVM - a python project to predict Pathogenic Effector proteins using a machine learning approach. 
+
+Requires BioPython (http://www.biopython.org) and LIBSVM (http://www.csie.ntu.edu.tw/~cjlin/libsvm/).
+
+Copyright (c) Simon J Cockell, Newcastle University Bioinformatics Support Unit, 2009.
+
+Simon J Cockell, 19/2/2009. FuzzierLogic.com
+
