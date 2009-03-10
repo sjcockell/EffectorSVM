@@ -2,6 +2,7 @@ from protein import Protein as pro
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
+import os
 
 record = SeqRecord(Seq("MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF",
                     IUPAC.protein),
@@ -9,3 +10,7 @@ record = SeqRecord(Seq("MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF",
                     description="toxic membrane protein, small")
 
 protein = pro.Protein(record)
+protein.findAminoAcidFeatures()
+protein.findSecondaryStructureFeatures()
+feature = protein.features
+print feature
