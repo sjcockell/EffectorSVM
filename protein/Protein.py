@@ -1,4 +1,5 @@
 from Bio.Seq import Seq
+from Bio.SeqUtils import ProtParam, ProtParamData
 import re
 import os
 import time
@@ -8,81 +9,59 @@ class Protein:
 	def __init__(self, record):
 		self.sequence = record.seq
 		self.id = record.id
+		self.pa = ProtParam.ProteinAnalysis(str(self.sequence))
 		self.features = {}
+		self.findAminoAcidFeatures()
+		self.findSecondaryStructureFeatures()
+		self.findHydropathyFeatures()
+		self.findInstabilityIndex()
+		os.remove('temp.fa')
+		os.remove('temp.ss')
+		os.remove('temp.pest')
 	
 	def findELMFeatures(self):
 		pass
-	
+
+	def findInstabilityIndex(self):
+		self.features['instability'] = self.pa.instability_index()
+
 	def findAminoAcidFeatures(self):
 		total = float(len(self.sequence))
 		test_seq = str(self.sequence).upper()
-		ala = float(len(re.compile('A').findall(test_seq)))
-		asx = float(len(re.compile('B').findall(test_seq)))
-		cys = float(len(re.compile('C').findall(test_seq)))
-		asp = float(len(re.compile('D').findall(test_seq)))
-		glu = float(len(re.compile('E').findall(test_seq)))
-		phe = float(len(re.compile('F').findall(test_seq)))
-		gly = float(len(re.compile('G').findall(test_seq)))
-		his = float(len(re.compile('H').findall(test_seq)))
-		ile = float(len(re.compile('I').findall(test_seq)))
-		lys = float(len(re.compile('K').findall(test_seq)))
-		leu = float(len(re.compile('L').findall(test_seq)))
-		met = float(len(re.compile('M').findall(test_seq)))
-		asn = float(len(re.compile('N').findall(test_seq)))
-		pro = float(len(re.compile('P').findall(test_seq)))
-		gln = float(len(re.compile('Q').findall(test_seq)))
-		arg = float(len(re.compile('R').findall(test_seq)))
-		ser = float(len(re.compile('S').findall(test_seq)))
-		thr = float(len(re.compile('T').findall(test_seq)))
-		sec = float(len(re.compile('U').findall(test_seq)))
-		val = float(len(re.compile('V').findall(test_seq)))
-		trp = float(len(re.compile('W').findall(test_seq)))
-		xaa = float(len(re.compile('X').findall(test_seq)))
-		tyr = float(len(re.compile('Y').findall(test_seq)))
-		glx = float(len(re.compile('Z').findall(test_seq)))
-		self.features['A'] = ala/total
-		self.features['C'] = cys/total
-		self.features['D'] = asp/total
-		self.features['E'] = glu/total
-		self.features['F'] = phe/total
-		self.features['G'] = gly/total
-		self.features['H'] = his/total
-		self.features['I'] = ile/total
-		self.features['K'] = lys/total
-		self.features['L'] = leu/total
-		self.features['M'] = met/total
-		self.features['N'] = asn/total
-		self.features['P'] = pro/total
-		self.features['Q'] = gln/total
-		self.features['R'] = arg/total
-		self.features['S'] = ser/total
-		self.features['T'] = thr/total
-		self.features['U'] = sec/total
-		self.features['V'] = val/total
-		self.features['W'] = trp/total
-		self.features['Y'] = tyr/total
-		self.features['tiny'] = (ala+cys+sec+gly+ser+thr)/total
-		self.features['small'] = (ala+cys+sec+asp+gly+asn+pro+ser+thr+val)/total
-		self.features['aliphatic'] = (ala+ile+leu+val)/total
-		self.features['aromatic'] = (phe+his+trp+tyr)/total
-		self.features['nonPolar'] = (ala+cys+sec+phe+gly+ile+leu+met+pro+val+trp+tyr)/total
-		self.features['polar'] = (asp+glu+his+lys+asn+gln+arg+ser+thr)/total
-		self.features['charged'] = (asp+glu+his+lys+arg)/total
-		self.features['basic'] = (his+lys+arg)/total
-		self.features['acidic'] = (asp+glu)/total
+		string = 'ACDEFGHIKLMNPQRSTUVWY'
+		for char in string:
+			self.features[char] = float(len(re.compile(char).findall(test_seq)))
+		self.features['tiny'] = (self.features['A']+self.features['C']+self.features['U']+self.features['G']+self.features['S']+self.features['T'])/total
+		self.features['small'] = (self.features['A']+self.features['C']+self.features['U']+self.features['D']+self.features['G']+self.features['N']+self.features['P']+self.features['S']+self.features['T']+self.features['V'])/total
+		self.features['aliphatic'] = (self.features['A']+self.features['I']+self.features['L']+self.features['V'])/total
+		self.features['aromatic'] = (self.features['F']+self.features['H']+self.features['W']+self.features['Y'])/total
+		self.features['nonPolar'] = (self.features['A']+self.features['C']+self.features['U']+self.features['F']+self.features['G']+self.features['I']+self.features['L']+self.features['M']+self.features['P']+self.features['V']+self.features['W']+self.features['Y'])/total
+		self.features['polar'] = (self.features['D']+self.features['E']+self.features['H']+self.features['K']+self.features['N']+self.features['Q']+self.features['R']+self.features['S']+self.features['T'])/total
+		self.features['charged'] = (self.features['D']+self.features['E']+self.features['H']+self.features['K']+self.features['R'])/total
+		self.features['basic'] = (self.features['H']+self.features['K']+self.features['R'])/total
+		self.features['acidic'] = (self.features['D']+self.features['E'])/total
 		self.features['length'] = total
+		for char in string:
+			self.features[char] = self.features[char]/total
+		self.features['MW'] = self.pa.molecular_weight()
 
 	def findHydropathyFeatures(self):
-		pass
+		self.features['pI'] = self.pa.isoelectric_point()
+		hydropathy_total = 0.0
+		hydropathy_plot = self.pa.protein_scale(ProtParamData.kd,10)
+		for point in hydropathy_plot:
+			hydropathy_total = hydropathy_total + point
+		hydropathy_mean = hydropathy_total / float(len(hydropathy_plot))
+		self.features['hydropathy'] = hydropathy_mean
 	
 	def findSecondaryStructureFeatures(self):
 		fh = open('temp.fa', 'w')
 		fh.write(">"+self.id+"\n")
 		fh.write(str(self.sequence))
 		fh.close()
-		command = 'garnier -sequence temp.fa -outfile temp.txt &> /dev/null'
+		command = 'garnier -sequence temp.fa -outfile temp.ss &> /dev/null'
 		sts = subprocess.call(command, shell=True)
-		while os.path.exists('temp.txt') == False:
+		while os.path.exists('temp.ss') == False:
 			time.sleep(0.1)
 		oh = open('temp.txt', 'r')
 		lines = oh.readlines()
@@ -95,9 +74,16 @@ class Protein:
 				sheet = m.group(2)
 		self.features['helix'] = float(helix) / float(len(str(self.sequence)))
 		self.features['sheet'] = float(sheet) / float(len(str(self.sequence)))
-		os.remove('temp.fa')
-		os.remove('temp.txt')
 
 	def findPestFeatures(self):
-		pass
+		command = "epestfind -sequence temp.fa -window 10 -outfile temp.pest -graph none -order score"
+		sts = subprocess.call(command, shell=True)
+		while os.path.exists('temp.pest') == False:
+			time.sleep(0.1)
+		oh = open('temp.txt', 'r')
+		lines = oh.readlines()
+		oh.close()
+		important_line = lines[2]
+#first digit here is number of PEST sites - if 0 will be 'No'
+
 	
