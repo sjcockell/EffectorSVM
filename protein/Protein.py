@@ -1,5 +1,6 @@
 from Bio.Seq import Seq
 from Bio.SeqUtils import ProtParam, ProtParamData
+from elm import ELM, Match
 import re
 import os
 import time
@@ -11,16 +12,26 @@ class Protein:
 		self.id = record.id
 		self.pa = ProtParam.ProteinAnalysis(str(self.sequence))
 		self.features = {}
+		self.scaled_features = {}
 		self.findAminoAcidFeatures()
 		self.findSecondaryStructureFeatures()
 		self.findHydropathyFeatures()
 		self.findInstabilityIndex()
+		self.findELMFeatures()
+		self.findPestFeatures()
 		os.remove('temp.fa')
 		os.remove('temp.ss')
 		os.remove('temp.pest')
 	
 	def findELMFeatures(self):
-		pass
+		e = ELM.ELM()
+		elms = e.elmList
+		elmNames = elms.keys()
+		for elmName in elmNames:
+			elmMotif = elms[elmName]
+			matcher = Match.Match(str(self.sequence), elmMotif)
+			self.features[elmName] = matcher.getNumberMatches()
+
 
 	def findInstabilityIndex(self):
 		self.features['instability'] = self.pa.instability_index()
@@ -59,14 +70,14 @@ class Protein:
 		fh.write(">"+self.id+"\n")
 		fh.write(str(self.sequence))
 		fh.close()
-		command = 'garnier -sequence temp.fa -outfile temp.ss &> /dev/null'
-		sts = subprocess.call(command, shell=True)
+		command = 'garnier -sequence temp.fa -outfile temp.ss > /dev/null 2>&1'
+		sts = subprocess.Popen(command, shell=True)
 		while os.path.exists('temp.ss') == False:
 			time.sleep(0.1)
-		oh = open('temp.txt', 'r')
+		oh = open('temp.ss', 'r')
 		lines = oh.readlines()
 		oh.close()
-		p = re.compile('Residue totals: H: (\d+)\s+E: (\d+)')
+		p = re.compile('Residue totals: H:\s*(\d+)\s+E:\s*(\d+)')
 		for line in lines:
 			if p.search(line):
 				m = p.search(line)
@@ -76,14 +87,24 @@ class Protein:
 		self.features['sheet'] = float(sheet) / float(len(str(self.sequence)))
 
 	def findPestFeatures(self):
-		command = "epestfind -sequence temp.fa -window 10 -outfile temp.pest -graph none -order score"
-		sts = subprocess.call(command, shell=True)
+		command = "epestfind -sequence temp.fa -window 10 -outfile temp.pest -graph none -order score > /dev/null 2>&1"
+		#sts = subprocess.call(command, shell=True)
+		os.system(command)
 		while os.path.exists('temp.pest') == False:
 			time.sleep(0.1)
-		oh = open('temp.txt', 'r')
+		oh = open('temp.pest', 'r')
 		lines = oh.readlines()
 		oh.close()
 		important_line = lines[2]
+		p1 = re.compile("^\s+(\d+)")
+		p2 = re.compile("^\s+No")
+		if p1.match(important_line):
+			no_pest = p1.match(important_line).group(1)
+		elif p2.match(important_line):
+			no_pest = 0
+		else:
+			print 'eh?'
+		self.features['pest'] = no_pest
 #first digit here is number of PEST sites - if 0 will be 'No'
 
 	
