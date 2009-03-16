@@ -1,12 +1,15 @@
 from protein import Protein
 from Bio import SeqIO
 from svm import *
+import random
 
 def start():
 	wt_proteins = getProteinData('data/wt.fa')
 	eff_proteins = getProteinData('data/eff.fa')
 	all_proteins = wt_proteins+eff_proteins
 	keyList = all_proteins[0].features.keys()
+	random.shuffle(all_proteins)
+	print all_proteins
 	sortedKeys = sorted(keyList)
 	excludedKeys = []
 	for key in sortedKeys:
